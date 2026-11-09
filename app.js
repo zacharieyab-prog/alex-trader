@@ -16,8 +16,8 @@ function readHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||
 function writeHistory(rows){localStorage.setItem(HISTORY_KEY,JSON.stringify(rows));}
 function escapeText(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function renderHistory(){
- const rows=readHistory(),directional=rows.filter(x=>x.signal!=="WAIT"),settled=directional.filter(x=>x.outcome==="WIN"||x.outcome==="LOSS"),wins=settled.filter(x=>x.outcome==="WIN").length,pending=directional.length-settled.length;
- $("statTotal").textContent=directional.length;$("statSettled").textContent=settled.length;$("statWins").textContent=wins;$("statPending").textContent=pending;$("statRate").textContent=settled.length?Math.round(wins/settled.length*100)+"%":"—";
+ const rows=readHistory(),directional=rows.filter(x=>x.signal!=="WAIT"),settled=directional.filter(x=>Boolean(x.outcome)),scored=directional.filter(x=>x.outcome==="WIN"||x.outcome==="LOSS"),wins=scored.filter(x=>x.outcome==="WIN").length,pending=directional.filter(x=>!x.outcome).length;
+ $("statTotal").textContent=directional.length;$("statSettled").textContent=settled.length;$("statWins").textContent=wins;$("statPending").textContent=pending;$("statRate").textContent=scored.length?Math.round(wins/scored.length*100)+"%":"—";
  $("historyEmpty").classList.toggle("hidden",rows.length>0);const list=$("historyList");list.replaceChildren();
  rows.slice().reverse().forEach(item=>{
   const card=document.createElement("article");card.className="history-card";
