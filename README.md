@@ -1,25 +1,30 @@
-# Alex Trader — IQ Option signal workspace
+# Alex Trader — AI Vision demo workspace
 
-A static, mobile-friendly BTC/USD decision-support prototype. It is designed for chart review and manual decisions only.
+BTC/USD screenshot-analysis workspace with an intentionally locked execution path.
 
-## Current features
-- BTC/USD workspace with 1-minute and 5-minute chart timeframes.
-- 1–5 minute expiry selector.
-- PNG/JPG/WEBP chart screenshot upload and local preview.
-- Manual EMA 20, EMA 50, RSI 14, MACD histogram, price and candle-direction checklist.
-- Basic rule-based HIGHER / LOWER / WAIT output and local session log.
-- No broker login, no order execution, and no real-money trading code.
-
-## Important limitations
-Screenshot upload currently displays the image only. It does not read candles or extract indicators. The signal engine is a transparent rule-based checklist, not an AI prediction model. A real screenshot-vision engine needs a secure server-side AI integration; API keys must never be placed in browser JavaScript. IQ Option connectivity and automated execution are intentionally not implemented.
-
-The checklist is educational decision support, not financial advice. A HIGHER or LOWER result is not a guarantee; short-expiry contracts are high risk.
+## Current build
+- BTC/USD chart screenshot upload (PNG/JPG/WEBP, max 8 MB).
+- Automatic server-side image analysis through OpenAI API when configured.
+- Conservative HIGHER / LOWER / WAIT assessment and visible chart observations.
+- User-selected custom demo stake is saved locally as an approval preference.
+- No broker login, order placement, order closing, or live execution is implemented.
+- Live execution is explicitly disabled.
 
 ## Run locally
-Open index.html in a modern browser, or serve this folder with any static web server.
+Requires Node.js 18+.
+```sh
+npm install
+cp .env.example .env
+# Set OPENAI_API_KEY in .env
+npm start
+```
+Open http://localhost:3000. Keep the API key only in the server environment. Never commit .env or place secrets in browser JavaScript.
 
-## Publish free with GitHub Pages
-In the repository, open Settings → Pages, choose Deploy from a branch, select main and root folder, then save. Wait for the Pages build to complete and open the URL GitHub provides.
+## Hosting
+GitHub Pages can host the static frontend only; it cannot run this backend. Deploy the Node server to a trusted backend host and configure OPENAI_API_KEY as a server secret.
+
+## Broker integration status
+IQ Option does not provide a supported public retail order-execution API documented for this project. No unofficial credential-based connector is included. Demo order execution remains disconnected; amount approval only saves the amount locally and does not submit a trade. A verified, supported demo API is required before implementing order open/close.
 
 ## Safety
-Real-money execution is disabled by design. Do not add broker credentials or API keys to this public-facing static app.
+AI chart interpretation can misread screenshots and is not guaranteed financial advice. Independently verify chart conditions. Short-expiry contracts can lose the entire stake. Live trading remains disabled.
