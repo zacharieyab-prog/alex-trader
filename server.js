@@ -1,0 +1,21 @@
+const express=require("express");
+const path=require("path");
+const multer=require("multer");
+const app=express(),PORT=process.env.PORT||3000;
+const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:8*1024*1024},fileFilter:(req,file,cb)=>cb(null,["image/png","image/jpeg","image/webp"].includes(file.mimetype))});
+app.use(express.static(__dirname));
+app.get("/api/health",(req,res)=>res.json({ok:true,aiConfigured:Boolean(process.env.OPENAI_API_KEY),executionEnabled:false,mode:"demo"}));
+app.post("/api/analyze",upload.single("chart"),async(req,res)=>{try{
+if(!req.file)return res.status(400).json({error:"Upload a PNG, JPG or WEBP screenshot."});
+if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"AI is not configured. Set OPENAI_API_KEY on the backend."});
+const timeframe=String(req.body.timeframe||"unknown").slice(0,12),expiry=Math.min(5,Math.max(1,Number(req.body.expiry)||1));
+const imageData="data:"+req.file.mimetype+";base64,"+req.file.buffer.toString("base64");
+const prompt="You are a cautious BTC/USD chart screenshot reader. Inspect the image for timeframe "+timeframe+". Return valid JSON with keys signal (HIGHER, LOWER, WAIT), reason, confidence_label (Low, Moderate, Unrated; never a percentage), extracted (object with symbol, visible_price, trend, candle_structure, support_resistance, indicators, uncertainties). Never invent values; unreadable values are Not clearly visible. Use WAIT if BTC/USD is not clear, chart is unreadable, or evidence is mixed/insufficient. No certainty or guaranteed outcomes. This is analysis only, not an order instruction.";
+const response=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",headers:{Authorization:"Bearer "+process.env.OPENAI_API_KEY,"Content-Type":"application/json"},body:JSON.stringify({model:process.env.OPENAI_VISION_MODEL||"gpt-4o-mini",temperature:0.1,response_format:{type:"json_object"},messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image_url",image_url:{url:imageData,detail:"high"}}]}]})});
+const data=await response.json();if(!response.ok)throw new Error(data.error?.message||"Vision API request failed");
+const raw=data.choices&&data.choices[0]&&data.choices[0].message.content;if(!raw)throw new Error("AI returned no analysis.");
+const result=JSON.parse(raw),signal=["HIGHER","LOWER","WAIT"].includes(String(result.signal).toUpperCase())?String(result.signal).toUpperCase():"WAIT";
+res.json({...result,signal,timeframe,expiry_minutes:expiry,execution_enabled:false});
+}catch(e){console.error("AI analysis:",e.message);res.status(500).json({error:"Screenshot analysis failed: "+e.message});}});
+app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"index.html")));
+app.listen(PORT,()=>console.log("Alex Trader listening on "+PORT));
