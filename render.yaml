@@ -9,5 +9,7 @@ services:
     envVars:
       - key: OPENAI_API_KEY
         sync: false
+      - key: TRADER_FEED_TOKEN
+        sync: false
       - key: OPENAI_VISION_MODEL
         value: gpt-4o-mini
