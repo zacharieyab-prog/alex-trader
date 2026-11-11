@@ -1,5 +1,6 @@
 const express=require("express");
 const path=require("path");
+const fs=require("fs");
 const multer=require("multer");
 const crypto=require("crypto");
 const {runAgents}=require("./agents");
@@ -65,6 +66,17 @@ function makeSignal(symbol,market,closes,source){if(closes.length<30)throw new E
 async function scanCrypto(symbol){const url="https://api.binance.com/api/v3/klines?symbol="+symbol+"&interval=5m&limit=60";const r=await fetch(url,{signal:AbortSignal.timeout(9000)});if(!r.ok)throw new Error("Binance HTTP "+r.status);const rows=await r.json();return makeSignal(symbol.replace("USDT","/USDT"),"Crypto",rows.map(x=>Number(x[4])),"Binance public market data");}
 async function scanMacro(symbol){if(!process.env.TWELVEDATA_API_KEY)throw new Error("Twelve Data API key required");const url="https://api.twelvedata.com/time_series?symbol="+encodeURIComponent(symbol)+"&interval=5min&outputsize=60&apikey="+encodeURIComponent(process.env.TWELVEDATA_API_KEY);const r=await fetch(url,{signal:AbortSignal.timeout(10000)});const d=await r.json();if(!r.ok||d.status==="error"||!d.values)throw new Error(d.message||"Market data unavailable");const closes=d.values.slice().reverse().map(x=>Number(x.close));const market=symbol==="XAU/USD"?"Gold":["SPX","NDX","DJI","FTSE"].includes(symbol)?"Index":"Forex";return makeSignal(symbol,market,closes,"Twelve Data");}
 app.get("/api/scanner/status",(req,res)=>res.json({enabled:true,markets:["Crypto","Forex","Gold","Indices"],cryptoSource:"Binance public spot candles",macroSource:process.env.TWELVEDATA_API_KEY?"Twelve Data connected":"Twelve Data key required for forex, gold and indices",intervalSeconds:60,executionEnabled:false}));
+app.get("/api/research/status",(req,res)=>{
+ const configPath=path.join(__dirname,"research-config.json");
+ const dataDir=path.join(__dirname,"data","historical");
+ const reportPath=path.join(__dirname,"data","reports","research-summary.json");
+ let config={},manifest=null,summary=null;
+ try{config=JSON.parse(fs.readFileSync(configPath,"utf8"));}catch{}
+ try{manifest=JSON.parse(fs.readFileSync(path.join(dataDir,"download-manifest.json"),"utf8"));}catch{}
+ try{summary=JSON.parse(fs.readFileSync(reportPath,"utf8"));}catch{}
+ const files=fs.existsSync(dataDir)?fs.readdirSync(dataDir).filter(f=>f.endsWith("-5m-90d.json")):[];
+ res.json({config,downloaded_datasets:files,manifest,summary,providers:{binance:"public spot historical data",twelve_data:process.env.TWELVEDATA_API_KEY?"API key configured":"API key required"},execution:{mode:"historical_and_demo_only",live_trading_enabled:false,order_placement_enabled:false}});
+});
 app.get("/api/scan",async(req,res)=>{try{if(scanCache.data&&Date.now()-scanCache.at<45000)return res.json({...scanCache.data,cached:true});const jobs=[...cryptoSymbols.map(s=>scanCrypto(s).catch(e=>({symbol:s.replace("USDT","/USDT"),market:"Crypto",signal:"UNAVAILABLE",reason:e.message}))),...macroSymbols.map(s=>scanMacro(s).catch(e=>({symbol:s,market:s==="XAU/USD"?"Gold":["SPX","NDX","DJI","FTSE"].includes(s)?"Index":"Forex",signal:"UNAVAILABLE",reason:e.message})))];const rawResults=await Promise.all(jobs);const results=rawResults.map(m=>({...m,team:runAgents(m)}));const payload={scanned_at:new Date().toISOString(),refresh_seconds:60,execution_enabled:false,team_agents:["Trend Scout","Momentum Scout","Risk Guardian","Signal Auditor"],signals:results,summary:{scanned:results.length,actionable:results.filter(x=>["BUY","SELL"].includes(x.team.final_signal)).length,waiting:results.filter(x=>x.team.final_signal==="WAIT").length,unavailable:results.filter(x=>x.signal==="UNAVAILABLE").length}};scanCache.at=Date.now();scanCache.data=payload;res.json(payload);}catch(e){res.status(502).json({error:"Market scan failed: "+e.message,execution_enabled:false});}});
 
 app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"index.html")));
