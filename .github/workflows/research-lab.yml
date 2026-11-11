@@ -36,7 +36,12 @@ jobs:
         continue-on-error: true
         env:
           TWELVEDATA_API_KEY: ${{ inputs.run_forex_gold && secrets.TWELVEDATA_API_KEY || '' }}
-        run: node scripts/download-research.js
+        run: |
+          if [ "${{ inputs.run_forex_gold }}" = "true" ]; then
+            node scripts/download-research.js
+          else
+            node scripts/download-research.js --crypto-only
+          fi
 
       - name: Run historical backtests
         id: backtest
