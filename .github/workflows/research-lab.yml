@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       run_forex_gold:
-        description: "Attempt Twelve Data forex and gold downloads (requires TWELVEDATA_API_KEY secret)"
+        description: "Attempt Twelve Data forex and gold downloads (requires TWELVEDATA_API_KEY repository secret)"
         required: true
         type: boolean
         default: false
@@ -24,10 +24,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run agent safety tests
         run: npm test
@@ -36,14 +35,8 @@ jobs:
         id: download
         continue-on-error: true
         env:
-          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
-          RUN_FOREX_GOLD: ${{ inputs.run_forex_gold }}
-        run: |
-          if [ "$RUN_FOREX_GOLD" = "true" ]; then
-            node scripts/download-research.js
-          else
-            node scripts/download-research.js --crypto-only
-          fi
+          TWELVEDATA_API_KEY: ${{ inputs.run_forex_gold && secrets.TWELVEDATA_API_KEY || '' }}
+        run: node scripts/download-research.js
 
       - name: Run historical backtests
         id: backtest
@@ -59,7 +52,7 @@ jobs:
           path: |
             data/historical/
             data/reports/
-            download-manifest.json
+            data/historical/download-manifest.json
             research-summary.json
           if-no-files-found: warn
           retention-days: 30
