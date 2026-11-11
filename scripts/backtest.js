@@ -112,10 +112,6 @@ function backtest(file) {
   }
   const finalRecords=all.filter(x=>x.signal==="BUY"||x.signal==="SELL").map(x=>({...x,net_return_pct:x.net_return_pct??0}));
   const costSensitivity = [5,10,20].map(bps => {
-    const trades = finalRecords.map(x => ({
-      net_return_pct: (x.signal === "BUY" ? x.gross_return_pct : -x.gross_return_pct) - bps / 100,
-      result: ((x.signal === "BUY" ? x.gross_return_pct : -x.gross_return_pct) - bps / 100) > 0 ? "WIN" : "LOSS"
-    }));
     return {round_trip_cost_bps:bps, out_of_sample:scoreDirectional(outOfSample.filter(x=>x.signal==="BUY"||x.signal==="SELL").map(x=>({
       net_return_pct:(x.signal==="BUY"?x.gross_return_pct:-x.gross_return_pct)-bps/100,
       result:((x.signal==="BUY"?x.gross_return_pct:-x.gross_return_pct)-bps/100)>0?"WIN":"LOSS"
@@ -126,7 +122,8 @@ function backtest(file) {
     candle_count:candles.length,forward_horizon_candles:horizon,
     estimated_holding_period_minutes:horizon*5,estimated_cost_bps_per_round_trip:costBps,
     split:{method:"chronological 70% training / 30% out-of-sample",split_at:candles[splitIndex].open_time},
-    team:{all:scoreDirectional(finalRecords),training:scoreDirectional(training.filter(x=>x.signal!=="WAIT")),out_of_sample:scoreDirectional(outOfSample.filter(x=>x.signal!=="WAIT"))},\n    cost_sensitivity:costSensitivity,
+    team:{all:scoreDirectional(finalRecords),training:scoreDirectional(training.filter(x=>x.signal!=="WAIT")),out_of_sample:scoreDirectional(outOfSample.filter(x=>x.signal!=="WAIT"))},
+    cost_sensitivity:costSensitivity,
     individual_agents:agentReports,
     risk_guardian:{...risk,blocked_adverse_rate_pct:risk.blocked?Number((risk.blocked_would_lose/risk.blocked*100).toFixed(2)):null,passed_adverse_rate_pct:risk.passed?Number((risk.passed_would_lose/risk.passed*100).toFixed(2)):null},
     limitations:[
