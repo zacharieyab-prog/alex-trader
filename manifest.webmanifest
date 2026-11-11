@@ -1,0 +1,19 @@
+{
+  "name": "Alex Trader 3.0",
+  "short_name": "Alex Trader",
+  "description": "AI chart analysis, market radar and historical research dashboard. Signals only; trading execution disabled.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#090d18",
+  "theme_color": "#090d18",
+  "icons": [
+    {
+      "src": "/icons/alex-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
