@@ -1,0 +1,73 @@
+name: Alex Trader Research Lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_forex_gold:
+        description: "Attempt Twelve Data forex and gold downloads (requires TWELVEDATA_API_KEY secret)"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out Alex Trader
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run agent safety tests
+        run: npm test
+
+      - name: Download historical market data
+        id: download
+        continue-on-error: true
+        env:
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          RUN_FOREX_GOLD: ${{ inputs.run_forex_gold }}
+        run: |
+          if [ "$RUN_FOREX_GOLD" = "true" ]; then
+            node scripts/download-research.js
+          else
+            node scripts/download-research.js --crypto-only
+          fi
+
+      - name: Run historical backtests
+        id: backtest
+        if: always()
+        continue-on-error: true
+        run: node scripts/backtest.js
+
+      - name: Upload research data and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alex-trader-research-${{ github.run_number }}
+          path: |
+            data/historical/
+            data/reports/
+            download-manifest.json
+            research-summary.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Report run status
+        if: always()
+        run: |
+          echo "Historical/demo research only."
+          echo "Live trading and order placement must remain disabled."
+          echo "Download step outcome: ${{ steps.download.outcome }}"
+          echo "Backtest step outcome: ${{ steps.backtest.outcome }}"
