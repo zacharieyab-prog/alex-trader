@@ -1,6 +1,14 @@
 name: Alex Trader Research Lab
 
 on:
+  push:
+    paths:
+      - ".github/workflows/research-lab.yml"
+      - "scripts/backtest.js"
+      - "scripts/download-research.js"
+      - "agents.js"
+      - "tests/**"
+      - "research-config.json"
   workflow_dispatch:
     inputs:
       run_forex_gold:
@@ -18,10 +26,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Check out Alex Trader
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
 
