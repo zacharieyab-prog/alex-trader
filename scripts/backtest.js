@@ -27,6 +27,7 @@ function rsi(values, period=14) {
     const d=values[i]-values[i-1];
     if(d>0) gains+=d; else losses-=d;
   }
+  if(losses===0 && gains===0) return 50;
   if(losses===0) return 100;
   if(gains===0) return 0;
   const rs=(gains/period)/(losses/period);
