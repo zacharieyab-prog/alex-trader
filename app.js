@@ -58,3 +58,9 @@ async function refreshResearch(){
 }
 $("refreshResearch")?.addEventListener("click",refreshResearch);
 refreshResearch();
+
+
+/* Installable application shell. API-backed features still require the Node server. */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(err => console.warn("App shell registration:", err)));
+}
