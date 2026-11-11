@@ -1,0 +1,52 @@
+{
+  "project": "Alex Trader 3.0",
+  "historical_research": {
+    "period_days": 90,
+    "markets": [
+      "crypto",
+      "forex",
+      "gold"
+    ],
+    "interval": "5min",
+    "crypto": {
+      "provider": "Binance public Spot market data",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "BNBUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+        "ADAUSDT",
+        "DOGEUSDT",
+        "LINKUSDT"
+      ]
+    },
+    "forex": {
+      "provider": "Twelve Data",
+      "symbols": [
+        "EUR/USD",
+        "GBP/USD",
+        "USD/JPY",
+        "AUD/USD",
+        "USD/CAD",
+        "USD/CHF"
+      ]
+    },
+    "gold": {
+      "provider": "Twelve Data",
+      "symbols": [
+        "XAU/USD"
+      ]
+    },
+    "execution": {
+      "mode": "historical_and_demo_only",
+      "live_trading_enabled": false,
+      "order_placement_enabled": false
+    },
+    "backtesting": {
+      "lookahead_prevention": true,
+      "out_of_sample_validation_required": true,
+      "include_fees_spread_slippage_when_available": true
+    }
+  }
+}
