@@ -7,7 +7,8 @@
     "start": "node server.js",
     "research:download": "node scripts/download-research.js",
     "research:backtest": "node scripts/backtest.js",
-    "research:all": "npm run research:download && npm run research:backtest"
+    "research:all": "npm run research:download && npm run research:backtest",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=18"
