@@ -1,5 +1,5 @@
 // Walk-forward team and per-agent backtest for 5-minute historical candles.
-// Usage: node scripts/backtest.js [dataset.json] [forward-candles=3] [cost-bps=0]
+// Usage: node scripts/backtest.js [dataset.json] [forward-candles=3] [cost-bps=10]
 // Without a file argument, runs every dataset in data/historical.
 // Signal is formed after candle i closes; simulated entry is next candle open.
 // No live trading, broker connection or order placement exists in this script.
@@ -12,7 +12,8 @@ const DATA = path.join(ROOT, "data", "historical");
 const REPORTS = path.join(ROOT, "data", "reports");
 const requestedFile = process.argv[2];
 const horizon = Math.max(1, Math.min(240, Number(process.argv[3]) || 3));
-const costBps = Math.max(0, Math.min(500, Number(process.argv[4]) || 0));
+const costArg = process.argv[4];
+const costBps = Math.max(0, Math.min(500, costArg === undefined ? 10 : Number(costArg)));
 const WARMUP = 60;
 
 function ema(values, period) {
@@ -110,19 +111,29 @@ function backtest(file) {
     };
   }
   const finalRecords=all.filter(x=>x.signal==="BUY"||x.signal==="SELL").map(x=>({...x,net_return_pct:x.net_return_pct??0}));
+  const costSensitivity = [5,10,20].map(bps => {
+    const trades = finalRecords.map(x => ({
+      net_return_pct: (x.signal === "BUY" ? x.gross_return_pct : -x.gross_return_pct) - bps / 100,
+      result: ((x.signal === "BUY" ? x.gross_return_pct : -x.gross_return_pct) - bps / 100) > 0 ? "WIN" : "LOSS"
+    }));
+    return {round_trip_cost_bps:bps, out_of_sample:scoreDirectional(outOfSample.filter(x=>x.signal==="BUY"||x.signal==="SELL").map(x=>({
+      net_return_pct:(x.signal==="BUY"?x.gross_return_pct:-x.gross_return_pct)-bps/100,
+      result:((x.signal==="BUY"?x.gross_return_pct:-x.gross_return_pct)-bps/100)>0?"WIN":"LOSS"
+    })))};
+  });
   const report={
     symbol:data.symbol,market:data.market,source:data.source,interval:data.interval,
     candle_count:candles.length,forward_horizon_candles:horizon,
     estimated_holding_period_minutes:horizon*5,estimated_cost_bps_per_round_trip:costBps,
     split:{method:"chronological 70% training / 30% out-of-sample",split_at:candles[splitIndex].open_time},
-    team:{all:scoreDirectional(finalRecords),training:scoreDirectional(training.filter(x=>x.signal!=="WAIT")),out_of_sample:scoreDirectional(outOfSample.filter(x=>x.signal!=="WAIT"))},
+    team:{all:scoreDirectional(finalRecords),training:scoreDirectional(training.filter(x=>x.signal!=="WAIT")),out_of_sample:scoreDirectional(outOfSample.filter(x=>x.signal!=="WAIT"))},\n    cost_sensitivity:costSensitivity,
     individual_agents:agentReports,
     risk_guardian:{...risk,blocked_adverse_rate_pct:risk.blocked?Number((risk.blocked_would_lose/risk.blocked*100).toFixed(2)):null,passed_adverse_rate_pct:risk.passed?Number((risk.passed_would_lose/risk.passed*100).toFixed(2)):null},
     limitations:[
       "This is a rule-based historical simulation, not model training or a prediction.",
       "Out-of-sample period is later in time and is not used to tune the rules.",
       "Simulated entry is next candle open; actual fills, latency, spread and slippage may differ.",
-      "Cost is only the user-supplied round-trip basis-point assumption; funding, market impact and venue-specific fees are not modeled.",
+      "Default cost assumption is 10 basis points round trip; sensitivity is also reported at 5 and 20 basis points. These are illustrative assumptions, not verified venue fees. Cost is only the user-supplied round-trip basis-point assumption; funding, market impact and venue-specific fees are not modeled.",
       "Five-minute provider candles are not IQ Option OTC quotes or binary-option settlement prices.",
       "A directional win rate does not establish profitability or guarantee future results."
     ],
