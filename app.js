@@ -26,3 +26,35 @@ $("refreshTraders").addEventListener("click",refreshTraders);renderHistory();ref
 /* Autonomous market radar: refreshes public feeds every 60 seconds. */
 async function refreshMarketScan(){const box=$("marketSignals");$("scanStatus").textContent="SCANNING";try{const r=await fetch("/api/scan");const d=await r.json();if(!r.ok)throw new Error(d.error||"Scan failed");$("scanCount").textContent=d.summary.scanned;$("scanActionable").textContent=d.summary.actionable;$("scanWaiting").textContent=d.summary.waiting;$("scanStatus").textContent=d.summary.unavailable?"PARTIAL":"ONLINE";$("scanUpdated").textContent="Last scan: "+new Date(d.scanned_at).toLocaleTimeString()+" · Refreshes every 60 seconds";box.replaceChildren();d.signals.forEach(s=>{const card=document.createElement("article");card.className="history-card";const head=document.createElement("div");head.className="history-card-head";const name=document.createElement("b");name.textContent=s.symbol+" · "+s.market;const finalSignal=s.team?.final_signal||s.signal;const tag=document.createElement("strong");tag.textContent=finalSignal;tag.style.color=finalSignal==="BUY"?"#56d6c5":finalSignal==="SELL"?"#ff6e7b":"#f5c66b";head.append(name,tag);card.append(head);const p=document.createElement("p");p.textContent=(s.team?.agents?.find(a=>a.name==="Signal Auditor")?.reason||s.reason)+(s.price!=null?" · Price: "+Number(s.price).toPrecision(8):"");card.append(p);const meta=document.createElement("small");meta.textContent=s.source||"Feed unavailable";card.append(meta);if(s.team?.agents){const team=document.createElement("div");team.className="history-meta";team.textContent=s.team.agents.map(a=>a.name+": "+a.vote).join(" · ");card.append(team);}box.append(card);});}catch(e){$("scanStatus").textContent="ERROR";box.textContent=e.message;}}
 $("scanNow").addEventListener("click",refreshMarketScan);refreshMarketScan();setInterval(refreshMarketScan,60000);
+
+/* Historical research lab status and saved out-of-sample reports. */
+async function refreshResearch(){
+ const status=$("researchStatus"),list=$("researchResults");
+ status.textContent="Loading research configuration…";list.replaceChildren();
+ try{
+  const response=await fetch("/api/research/status");const d=await response.json();if(!response.ok)throw new Error(d.error||"Research status unavailable");
+  const files=d.downloaded_datasets||[];$("researchDatasets").textContent=files.length;
+  const lines=[];
+  lines.push("Configured: 90 days · 5-minute candles · Crypto, forex and gold.");
+  lines.push("Crypto provider: "+d.providers.binance+".");
+  lines.push("Forex/gold provider: "+d.providers.twelve_data+".");
+  lines.push("Live trading: DISABLED · Order placement: DISABLED.");
+  if(d.manifest?.failed?.length)lines.push("Download issues: "+d.manifest.failed.map(x=>(x.symbol||x.market)+": "+x.error).join(" | "));
+  status.textContent=lines.join(" ");
+  const datasets=d.summary?.datasets||[];
+  if(!datasets.length){const empty=document.createElement("div");empty.className="history-empty";empty.textContent=files.length?"Historical files are present. Run npm run research:backtest to create out-of-sample reports.":"No historical candle files downloaded yet. Run npm run research:download from the project terminal.";list.append(empty);return;}
+  datasets.forEach(item=>{
+   const card=document.createElement("article");card.className="history-card";
+   const head=document.createElement("div");head.className="history-card-head";
+   const name=document.createElement("b");name.textContent=item.symbol+" · "+item.market;
+   const rate=document.createElement("strong");rate.textContent=item.team_oos?.win_rate_pct==null?"No settled signals":item.team_oos.win_rate_pct+"% OOS win rate";
+   head.append(name,rate);card.append(head);
+   const stats=document.createElement("p");stats.textContent="Out-of-sample signals: "+(item.team_oos?.signals??0)+" · Wins: "+(item.team_oos?.wins??0)+" · Losses: "+(item.team_oos?.losses??0)+" · Max drawdown: "+(item.team_oos?.max_drawdown_pct??"—")+"%.";
+   card.append(stats);
+   const agent=document.createElement("small");agent.textContent=Object.entries(item.agents_oos||{}).map(([n,v])=>n+": "+(v.win_rate_pct==null?"—":v.win_rate_pct+"% ("+v.resolved+" resolved)")).join(" · ");
+   card.append(agent);list.append(card);
+  });
+ }catch(e){status.textContent="Could not load research status: "+e.message;}
+}
+$("refreshResearch")?.addEventListener("click",refreshResearch);
+refreshResearch();
