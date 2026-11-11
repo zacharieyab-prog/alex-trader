@@ -4,7 +4,10 @@
   "private": true,
   "description": "BTC/USD AI screenshot analysis demo workspace",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "research:download": "node scripts/download-research.js",
+    "research:backtest": "node scripts/backtest.js",
+    "research:all": "npm run research:download && npm run research:backtest"
   },
   "engines": {
     "node": ">=18"
