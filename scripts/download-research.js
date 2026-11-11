@@ -69,6 +69,7 @@ async function downloadTwelveData(symbol, startMs, endMs, apiKey) {
     u.searchParams.set("start_date", stamp(new Date(from)));
     u.searchParams.set("end_date", stamp(new Date(to)));
     u.searchParams.set("order", "ASC");
+    u.searchParams.set("timezone", "UTC");
     u.searchParams.set("outputsize", "5000");
     u.searchParams.set("apikey", apiKey);
     const r = await fetch(u, { signal: AbortSignal.timeout(25000) });
