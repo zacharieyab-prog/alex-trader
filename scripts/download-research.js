@@ -105,12 +105,15 @@ async function main() {
     } catch (e) { console.error("FAILED " + symbol + ": " + e.message); results.failed.push({symbol,error:e.message}); }
   }
 
+  const cryptoOnly = process.argv.includes("--crypto-only");
   const apiKey = process.env.TWELVEDATA_API_KEY;
   const macro = [
     ...CONFIG.forex.symbols.map(symbol => ({symbol,market:"forex"})),
     ...CONFIG.gold.symbols.map(symbol => ({symbol,market:"gold"}))
   ];
-  if (!apiKey) {
+  if (cryptoOnly) {
+    console.log("Crypto-only mode selected. Forex/gold downloads intentionally skipped.");
+  } else if (!apiKey) {
     console.warn("TWELVEDATA_API_KEY is not set. Forex/gold downloads skipped, not fabricated.");
     results.failed.push({market:"forex+gold",error:"TWELVEDATA_API_KEY is required."});
   } else {
