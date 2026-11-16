@@ -79,5 +79,10 @@ app.get("/api/research/status",(req,res)=>{
 });
 app.get("/api/scan",async(req,res)=>{try{if(scanCache.data&&Date.now()-scanCache.at<45000)return res.json({...scanCache.data,cached:true});const jobs=[...cryptoSymbols.map(s=>scanCrypto(s).catch(e=>({symbol:s.replace("USDT","/USDT"),market:"Crypto",signal:"UNAVAILABLE",reason:e.message}))),...macroSymbols.map(s=>scanMacro(s).catch(e=>({symbol:s,market:s==="XAU/USD"?"Gold":["SPX","NDX","DJI","FTSE"].includes(s)?"Index":"Forex",signal:"UNAVAILABLE",reason:e.message})))];const rawResults=await Promise.all(jobs);const results=rawResults.map(m=>({...m,team:runAgents(m)}));const payload={scanned_at:new Date().toISOString(),refresh_seconds:60,execution_enabled:false,team_agents:["Trend Scout","Momentum Scout","Risk Guardian","Signal Auditor"],signals:results,summary:{scanned:results.length,actionable:results.filter(x=>["BUY","SELL"].includes(x.team.final_signal)).length,waiting:results.filter(x=>x.team.final_signal==="WAIT").length,unavailable:results.filter(x=>x.signal==="UNAVAILABLE").length}};scanCache.at=Date.now();scanCache.data=payload;res.json(payload);}catch(e){res.status(502).json({error:"Market scan failed: "+e.message,execution_enabled:false});}});
 
+/* Trader Skill research adapter. All proposals are demo-only; no broker routes. */
+const {skills:traderSkills,evaluateProposal}=require("./trader-skill-adapter");
+app.get("/api/trader-skills",(req,res)=>res.json({skills:traderSkills.map(([id,description])=>({id,description,status:["risk","budget"].includes(id)?"adapter_available":"planned_not_connected"})),mode:"demo",execution_enabled:false,order_placement_enabled:false,upstream:"Jakeschincariol/trader-skill",license:"MIT"}));
+app.post("/api/trader-skills/risk-check",(req,res)=>res.json(evaluateProposal(req.body)));
+
 app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"index.html")));
 app.listen(PORT,()=>console.log("Alex Trader listening on "+PORT));
